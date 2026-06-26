@@ -1,0 +1,21 @@
+{
+  "name": "discord-bot-allinone",
+  "version": "1.0.0",
+  "description": "Bot Discord complet : Tickets, Captcha, Accueil, Sondages/Giveaways, Notif Twitch Live",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+  },
+  "license": "MIT"
+}
