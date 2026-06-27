@@ -25,10 +25,18 @@ db.exec(`
     channel_id TEXT PRIMARY KEY,
     guild_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    category TEXT DEFAULT NULL,
     status TEXT NOT NULL DEFAULT 'open',
     created_at INTEGER NOT NULL
   )
 `);
+
+// Migration douce : si la table existait déjà sans la colonne 'category'
+// (anciennes installations), on l'ajoute sans perdre les données existantes.
+const ticketColumns = db.prepare("PRAGMA table_info(tickets)").all().map((c) => c.name);
+if (!ticketColumns.includes('category')) {
+  db.exec('ALTER TABLE tickets ADD COLUMN category TEXT DEFAULT NULL');
+}
 
 // ---------------------------------------------------------------------------
 // TABLE: pending_verifications
