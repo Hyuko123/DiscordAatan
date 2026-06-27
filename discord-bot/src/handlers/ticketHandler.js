@@ -9,25 +9,29 @@ const {
 const db = require('../database/db');
 
 // Définition centralisée des catégories de ticket : label affiché, emoji,
-// préfixe du nom de salon, et message d'accueil personnalisé.
+// préfixe du nom de salon, message d'accueil personnalisé, et la variable
+// d'environnement contenant l'ID de la catégorie Discord cible.
 const TICKET_CATEGORIES = {
   partenariat: {
     label: 'Partenariat',
     emoji: '🤝',
     prefix: 'partenariat',
     welcomeMessage: 'Merci de nous présenter ton serveur/projet ainsi que le type de partenariat souhaité.',
+    envVar: 'TICKET_CATEGORY_PARTENARIAT_ID',
   },
   recrutement: {
     label: 'Recrutement',
     emoji: '📋',
     prefix: 'recrutement',
     welcomeMessage: 'Merci de nous indiquer le poste souhaité, ton âge et ton expérience.',
+    envVar: 'TICKET_CATEGORY_RECRUTEMENT_ID',
   },
   recompenses: {
     label: 'Demande de récompenses',
     emoji: '🎁',
     prefix: 'recompense',
     welcomeMessage: 'Merci de préciser la récompense concernée et la preuve associée (capture d\'écran, etc.).',
+    envVar: 'TICKET_CATEGORY_RECOMPENSES_ID',
   },
 };
 
@@ -63,7 +67,10 @@ async function createTicket(interaction) {
     db.prepare('DELETE FROM tickets WHERE channel_id = ?').run(existing.channel_id);
   }
 
-  const categoryId = process.env.TICKET_CATEGORY_ID || null;
+  // Catégorie Discord cible : on cherche d'abord la variable spécifique au
+  // type de ticket (ex: TICKET_CATEGORY_PARTENARIAT_ID), sinon on retombe
+  // sur TICKET_CATEGORY_ID (catégorie unique partagée) si elle est définie.
+  const categoryId = process.env[categoryInfo.envVar] || process.env.TICKET_CATEGORY_ID || null;
   const staffRoleIds = (process.env.TICKET_STAFF_ROLE_IDS || '')
     .split(',')
     .map((id) => id.trim())
@@ -110,9 +117,9 @@ async function createTicket(interaction) {
       topic: `Ticket [${categoryInfo.label}] de ${user.tag} (${user.id})`,
     });
   } catch (err) {
-    console.error('[TICKET] Erreur création salon:', err.message);
+    console.error(`[TICKET] Erreur création salon (catégorie ${categoryInfo.envVar}=${categoryId}):`, err.message);
     return interaction.reply({
-      content: '❌ Impossible de créer le ticket. Vérifie que le bot a bien la permission "Gérer les salons" et que la catégorie configurée existe.',
+      content: `❌ Impossible de créer le ticket. Vérifie que le bot a bien la permission "Gérer les salons" et que \`${categoryInfo.envVar}\` (ou \`TICKET_CATEGORY_ID\`) contient bien l'ID d'une catégorie existante.`,
       ephemeral: true,
     });
   }
