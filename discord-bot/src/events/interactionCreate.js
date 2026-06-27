@@ -35,9 +35,6 @@ module.exports = {
     if (interaction.isButton()) {
       try {
         switch (interaction.customId) {
-          case 'ticket_create':
-            await createTicket(interaction);
-            break;
           case 'ticket_close':
             await closeTicket(interaction);
             break;
@@ -48,11 +45,35 @@ module.exports = {
             await joinGiveaway(interaction);
             break;
           default:
-            // customId géré ailleurs (ex: giveaway_join) -> on laisse passer sans erreur
+            // customId géré ailleurs -> on laisse passer sans erreur
             break;
         }
       } catch (err) {
         console.error(`[INTERACTION] Erreur sur le bouton ${interaction.customId}:`, err);
+        const errorPayload = { content: '❌ Une erreur est survenue.', ephemeral: true };
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp(errorPayload).catch(() => {});
+        } else {
+          await interaction.reply(errorPayload).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // Menus déroulants (Select Menus)
+    // -------------------------------------------------------------
+    if (interaction.isStringSelectMenu()) {
+      try {
+        switch (interaction.customId) {
+          case 'ticket_create_select':
+            await createTicket(interaction);
+            break;
+          default:
+            break;
+        }
+      } catch (err) {
+        console.error(`[INTERACTION] Erreur sur le menu ${interaction.customId}:`, err);
         const errorPayload = { content: '❌ Une erreur est survenue.', ephemeral: true };
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(errorPayload).catch(() => {});
