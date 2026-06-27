@@ -8,11 +8,43 @@ const {
 } = require('discord.js');
 const db = require('../database/db');
 
+// Définition centralisée des catégories de ticket : label affiché, emoji,
+// préfixe du nom de salon, et message d'accueil personnalisé.
+const TICKET_CATEGORIES = {
+  partenariat: {
+    label: 'Partenariat',
+    emoji: '🤝',
+    prefix: 'partenariat',
+    welcomeMessage: 'Merci de nous présenter ton serveur/projet ainsi que le type de partenariat souhaité.',
+  },
+  recrutement: {
+    label: 'Recrutement',
+    emoji: '📋',
+    prefix: 'recrutement',
+    welcomeMessage: 'Merci de nous indiquer le poste souhaité, ton âge et ton expérience.',
+  },
+  recompenses: {
+    label: 'Demande de récompenses',
+    emoji: '🎁',
+    prefix: 'recompense',
+    welcomeMessage: 'Merci de préciser la récompense concernée et la preuve associée (capture d\'écran, etc.).',
+  },
+};
+
 /**
- * Crée un salon de ticket privé pour l'utilisateur qui a cliqué sur le bouton.
+ * Crée un salon de ticket privé pour l'utilisateur qui a choisi une catégorie dans le menu.
+ * @param {import('discord.js').StringSelectMenuInteraction} interaction
  */
 async function createTicket(interaction) {
   const { guild, user } = interaction;
+
+  // La valeur sélectionnée dans le menu déroulant (partenariat / recrutement / recompenses)
+  const categoryKey = interaction.values?.[0];
+  const categoryInfo = TICKET_CATEGORIES[categoryKey];
+
+  if (!categoryInfo) {
+    return interaction.reply({ content: '❌ Catégorie de ticket invalide.', ephemeral: true });
+  }
 
   // On évite les doublons : un seul ticket ouvert à la fois par utilisateur.
   const existing = db
@@ -71,11 +103,11 @@ async function createTicket(interaction) {
   let channel;
   try {
     channel = await guild.channels.create({
-      name: `ticket-${user.username}`.toLowerCase().slice(0, 90),
+      name: `${categoryInfo.prefix}-${user.username}`.toLowerCase().slice(0, 90),
       type: ChannelType.GuildText,
       parent: categoryId || undefined,
       permissionOverwrites,
-      topic: `Ticket de ${user.tag} (${user.id})`,
+      topic: `Ticket [${categoryInfo.label}] de ${user.tag} (${user.id})`,
     });
   } catch (err) {
     console.error('[TICKET] Erreur création salon:', err.message);
@@ -86,14 +118,14 @@ async function createTicket(interaction) {
   }
 
   db.prepare(
-    'INSERT INTO tickets (channel_id, guild_id, user_id, status, created_at) VALUES (?, ?, ?, \'open\', ?)',
-  ).run(channel.id, guild.id, user.id, Date.now());
+    'INSERT INTO tickets (channel_id, guild_id, user_id, category, status, created_at) VALUES (?, ?, ?, ?, \'open\', ?)',
+  ).run(channel.id, guild.id, user.id, categoryKey, Date.now());
 
   const embed = new EmbedBuilder()
     .setColor(0x5865f2)
-    .setTitle('🎫 Nouveau ticket')
+    .setTitle(`${categoryInfo.emoji} Ticket — ${categoryInfo.label}`)
     .setDescription(
-      `Bienvenue ${user}, merci de décrire ta demande.\nUn membre du staff te répondra dès que possible.`,
+      `Bienvenue ${user} !\n${categoryInfo.welcomeMessage}\nUn membre du staff te répondra dès que possible.`,
     )
     .setTimestamp();
 
